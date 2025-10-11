@@ -97,14 +97,7 @@ export default styled.div`
       text-align: right;
       /* use padding instead of margin so clientHeight can capture it */
       padding-top: 0.5em;
-    }
-    .dt-pagination .pagination {
-      margin: 0;
-    }
-
-    .pagination > li > span.dt-pagination-ellipsis:focus,
-    .pagination > li > span.dt-pagination-ellipsis:hover {
-      background: ${theme.colors.grayscale.light5};
+      padding-bottom: 0.5em;
     }
 
     .dt-no-results {
