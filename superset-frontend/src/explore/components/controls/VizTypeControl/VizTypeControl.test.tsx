@@ -245,6 +245,16 @@ describe('VizTypeControl', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('Search input is focusable when modal opens', async () => {
+    await waitForRenderWrapper();
+
+    const searchInput = screen.getByTestId(getTestId('search-input'));
+    
+    // Verify that the search input can be focused
+    searchInput.focus();
+    expect(searchInput).toHaveFocus();
+  });
+
   it('Submit on viz type double-click', async () => {
     await waitForRenderWrapper();
     userEvent.click(screen.getByRole('button', { name: 'ballot All charts' }));
