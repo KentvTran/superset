@@ -17,6 +17,11 @@
  * under the License.
  */
 import { CSSProperties, forwardRef, memo, Ref } from 'react';
+import {
+  createUltimatePagination,
+  ITEM_TYPES,
+} from 'react-ultimate-pagination';
+import Pagination from 'src/components/Pagination/Wrapper';
 
 export interface PaginationProps {
   pageCount: number; // number of pages
@@ -27,50 +32,27 @@ export interface PaginationProps {
   style?: CSSProperties;
 }
 
-// first, ..., prev, current, next, ..., last
-const MINIMAL_PAGE_ITEM_COUNT = 7;
-
-/**
- * Generate numeric page items around current page.
- *   - Always include first and last page
- *   - Add ellipsis if needed
- */
-export function generatePageItems(
-  total: number,
-  current: number,
-  width: number,
-) {
-  if (width < MINIMAL_PAGE_ITEM_COUNT) {
-    throw new Error(
-      `Must allow at least ${MINIMAL_PAGE_ITEM_COUNT} page items`,
-    );
-  }
-  if (width % 2 === 0) {
-    throw new Error(`Must allow odd number of page items`);
-  }
-  if (total < width) {
-    return [...new Array(total).keys()];
-  }
-  const left = Math.max(
-    0,
-    Math.min(total - width, current - Math.floor(width / 2)),
-  );
-  const items: (string | number)[] = new Array(width);
-  for (let i = 0; i < width; i += 1) {
-    items[i] = i + left;
-  }
-  // replace non-ending items with placeholders
-  if (typeof items[0] === 'number' && items[0] > 0) {
-    items[0] = 0;
-    items[1] = 'prev-more';
-  }
-  const lastItem = items[items.length - 1];
-  if (typeof lastItem === 'number' && lastItem < total - 1) {
-    items[items.length - 1] = total - 1;
-    items[items.length - 2] = 'next-more';
-  }
-  return items;
-}
+const TableChartPagination = createUltimatePagination({
+  WrapperComponent: Pagination,
+  itemTypeToComponent: {
+    [ITEM_TYPES.PAGE]: ({ value, isActive, onClick }) => (
+      <Pagination.Item active={isActive} onClick={onClick}>
+        {value}
+      </Pagination.Item>
+    ),
+    [ITEM_TYPES.ELLIPSIS]: ({ isActive, onClick }) => (
+      <Pagination.Ellipsis disabled={isActive} onClick={onClick} />
+    ),
+    [ITEM_TYPES.PREVIOUS_PAGE_LINK]: ({ isActive, onClick }) => (
+      <Pagination.Prev disabled={isActive} onClick={onClick} />
+    ),
+    [ITEM_TYPES.NEXT_PAGE_LINK]: ({ isActive, onClick }) => (
+      <Pagination.Next disabled={isActive} onClick={onClick} />
+    ),
+    [ITEM_TYPES.FIRST_PAGE_LINK]: () => null,
+    [ITEM_TYPES.LAST_PAGE_LINK]: () => null,
+  },
+});
 
 export default memo(
   forwardRef(function Pagination(
@@ -83,39 +65,14 @@ export default memo(
     }: PaginationProps,
     ref: Ref<HTMLDivElement>,
   ) {
-    const pageItems = generatePageItems(
-      pageCount,
-      currentPage,
-      maxPageItemCount,
-    );
     return (
       <div ref={ref} className="dt-pagination" style={style}>
-        <ul className="pagination pagination-sm">
-          {pageItems.map(item =>
-            typeof item === 'number' ? (
-              // actual page number
-              <li
-                key={item}
-                className={currentPage === item ? 'active' : undefined}
-              >
-                <a
-                  href={`#page-${item}`}
-                  role="button"
-                  onClick={e => {
-                    e.preventDefault();
-                    onPageChange(item);
-                  }}
-                >
-                  {item + 1}
-                </a>
-              </li>
-            ) : (
-              <li key={item} className="dt-pagination-ellipsis">
-                <span>…</span>
-              </li>
-            ),
-          )}
-        </ul>
+        <TableChartPagination
+          totalPages={pageCount}
+          currentPage={currentPage + 1} // Convert from zero-based to one-based
+          onChange={(page: number) => onPageChange(page - 1)} // Convert from one-based to zero-based
+          maxPageItemCount={maxPageItemCount}
+        />
       </div>
     );
   }),
