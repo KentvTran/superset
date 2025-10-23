@@ -54,6 +54,7 @@ export function hasHtmlTagPattern(str: string): boolean {
 export function isProbablyHTML(text: string) {
   const cleanedStr = text.trim().toLowerCase();
 
+  // Only detect HTML for complete documents or obvious HTML patterns
   if (
     cleanedStr.startsWith('<!doctype html>') &&
     hasHtmlTagPattern(cleanedStr)
@@ -61,9 +62,33 @@ export function isProbablyHTML(text: string) {
     return true;
   }
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(cleanedStr, 'text/html');
-  return Array.from(doc.body.childNodes).some(({ nodeType }) => nodeType === 1);
+  // Check for complete HTML document patterns
+  if (
+    cleanedStr.startsWith('<html') ||
+    cleanedStr.startsWith('<head') ||
+    cleanedStr.startsWith('<body')
+  ) {
+    return true;
+  }
+
+  // Check for multiple HTML tags (more likely to be intentional HTML)
+  const htmlTagCount = (cleanedStr.match(/<[^>]+>/g) || []).length;
+  if (htmlTagCount >= 2) {
+    return true;
+  }
+
+  // For single tag patterns, be more conservative
+  // Only treat as HTML if it looks like a complete, intentional HTML structure
+  const singleTagPattern = /^<[a-z][a-z0-9]*[^>]*>.*<\/[a-z][a-z0-9]*>$/i;
+  if (singleTagPattern.test(text.trim())) {
+    // Additional check: ensure it's not just angle brackets in text
+    const tagName = text.trim().match(/^<([a-z][a-z0-9]*)/i)?.[1];
+    if (tagName && ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'strong', 'em', 'b', 'i'].includes(tagName.toLowerCase())) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function sanitizeHtmlIfNeeded(htmlString: string) {
@@ -73,10 +98,18 @@ export function sanitizeHtmlIfNeeded(htmlString: string) {
 export function safeHtmlSpan(possiblyHtmlString: string) {
   const isHtml = isProbablyHTML(possiblyHtmlString);
   if (isHtml) {
+    const sanitizedHtml = sanitizeHtml(possiblyHtmlString);
+    
+    // Fallback: If sanitization removes all content, treat as plain text
+    // This prevents data loss when XSS filter is too aggressive
+    if (sanitizedHtml.trim() === '' && possiblyHtmlString.trim() !== '') {
+      return possiblyHtmlString;
+    }
+    
     return (
       <span
         className="safe-html-wrapper"
-        dangerouslySetInnerHTML={{ __html: sanitizeHtml(possiblyHtmlString) }}
+        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
       />
     );
   }
