@@ -71,6 +71,8 @@ import DataSourcePanel from '../DatasourcePanel';
 import ConnectedExploreChartHeader from '../ExploreChartHeader';
 import ExploreContainer from '../ExploreContainer';
 
+const originalDocumentTitle = document.title;
+
 const propTypes = {
   ...ExploreChartPanel.propTypes,
   actions: PropTypes.object.isRequired,
@@ -368,6 +370,17 @@ function ExploreViewContainer(props) {
         : undefined,
     );
   });
+
+  useEffect(() => {
+    if (props.sliceName) {
+      document.title = `${props.sliceName} | Superset`;
+    } else {
+      document.title = originalDocumentTitle;
+    }
+    return () => {
+      document.title = originalDocumentTitle;
+    };
+  }, [props.sliceName]);
 
   useChangeEffect(tabId, (previous, current) => {
     if (current) {

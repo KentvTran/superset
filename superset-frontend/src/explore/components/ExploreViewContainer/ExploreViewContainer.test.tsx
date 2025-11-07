@@ -299,3 +299,65 @@ test('does omit hiddenFormData when query_mode is not enabled', async () => {
     expect(formData[key]).toBeUndefined();
   });
 });
+
+describe('document title management', () => {
+  const initialDocumentTitle = document.title;
+
+  beforeEach(() => {
+    document.title = initialDocumentTitle;
+  });
+
+  afterEach(() => {
+    document.title = initialDocumentTitle;
+  });
+
+  test('updates document title when sliceName is provided', async () => {
+    const chartTitle = 'Orders Trend';
+    renderWithRouter({
+      initialState: {
+        ...reduxState,
+        explore: {
+          ...reduxState.explore,
+          slice: {
+            ...reduxState.explore.slice,
+            slice_name: chartTitle,
+          },
+        },
+      },
+    });
+
+    await waitFor(() =>
+      expect(document.title).toBe(`${chartTitle} | Superset`),
+    );
+  });
+
+  test('falls back to original document title when sliceName is absent', async () => {
+    renderWithRouter({ initialState: reduxState });
+
+    await waitFor(() => expect(document.title).toBe(initialDocumentTitle));
+  });
+
+  test('restores original title on unmount', async () => {
+    const chartTitle = 'Sales Overview';
+    const { unmount } = renderWithRouter({
+      initialState: {
+        ...reduxState,
+        explore: {
+          ...reduxState.explore,
+          slice: {
+            ...reduxState.explore.slice,
+            slice_name: chartTitle,
+          },
+        },
+      },
+    });
+
+    await waitFor(() =>
+      expect(document.title).toBe(`${chartTitle} | Superset`),
+    );
+
+    unmount();
+
+    expect(document.title).toBe(initialDocumentTitle);
+  });
+});
