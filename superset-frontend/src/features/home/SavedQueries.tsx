@@ -16,8 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { useCallback, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useState, MouseEvent } from 'react';
+import { Link, useHistory } from 'react-router-dom';
 import { styled, SupersetClient, t, useTheme, css } from '@superset-ui/core';
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/cjs/light';
 import sql from 'react-syntax-highlighter/dist/cjs/languages/hljs/sql';
@@ -28,6 +28,7 @@ import withToasts from 'src/components/MessageToasts/withToasts';
 import { Dropdown } from 'src/components/Dropdown';
 import { Menu } from 'src/components/Menu';
 import { copyQueryLink, useListViewResource } from 'src/views/CRUD/hooks';
+import copyTextToClipboard from 'src/utils/copy';
 import ListViewCard from 'src/components/ListViewCard';
 import DeleteModal from 'src/components/DeleteModal';
 import Icons from 'src/components/Icons';
@@ -123,6 +124,7 @@ const SavedQueries = ({
   showThumbnails,
   featureFlag,
 }: SavedQueriesProps) => {
+  const history = useHistory();
   const {
     state: { loading, resourceCollection: queries },
     hasPerm,
@@ -191,6 +193,29 @@ const SavedQueries = ({
       ],
       filters: getFilterValues(tab, WelcomeTable.SavedQueries, user),
     });
+
+  const handleCardClick = useCallback(
+    async (queryId: number, openInNewWindow: boolean) => {
+      const url = `${window.location.origin}/sqllab?savedQueryId=${queryId}`;
+
+      try {
+        // Copy link to clipboard first
+        await copyTextToClipboard(() => Promise.resolve(url));
+        addSuccessToast(t('Link Copied!'));
+      } catch (error) {
+        // If clipboard fails, still navigate but show error toast
+        addDangerToast(t('Sorry, your browser does not support copying.'));
+      }
+
+      // Navigate after clipboard operation completes (or fails)
+      if (openInNewWindow) {
+        window.open(`/sqllab?savedQueryId=${queryId}`);
+      } else {
+        history.push(`/sqllab?savedQueryId=${queryId}`);
+      }
+    },
+    [addDangerToast, addSuccessToast, history],
+  );
 
   const renderMenu = useCallback(
     (query: Query) => (
@@ -298,10 +323,25 @@ const SavedQueries = ({
       {queries.length > 0 ? (
         <CardContainer showThumbnails={showThumbnails}>
           {queries.map(q => (
-            <CardStyles key={q.id}>
+            <CardStyles
+              key={q.id}
+              onClick={(e: MouseEvent) => {
+                // Don't trigger if clicking on the actions menu
+                if (
+                  (e.target as HTMLElement).closest(
+                    '[data-test="card-actions"]',
+                  ) ||
+                  (e.target as HTMLElement).closest('.ant-dropdown')
+                ) {
+                  return;
+                }
+                if (q.id) {
+                  handleCardClick(q.id, e.metaKey || e.ctrlKey);
+                }
+              }}
+            >
               <ListViewCard
                 imgURL=""
-                url={`/sqllab?savedQueryId=${q.id}`}
                 title={q.label}
                 imgFallbackURL="/static/assets/images/empty-query.svg"
                 description={t('Modified %s', q.changed_on_delta_humanized)}
