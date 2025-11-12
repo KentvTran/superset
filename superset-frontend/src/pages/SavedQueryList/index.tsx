@@ -26,7 +26,7 @@ import {
   css,
   useTheme,
 } from '@superset-ui/core';
-import { useCallback, useMemo, useState, MouseEvent } from 'react';
+import { useCallback, useMemo, useState, MouseEvent, KeyboardEvent } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import rison from 'rison';
 import {
@@ -61,6 +61,7 @@ import Icons from 'src/components/Icons';
 import { UserWithPermissionsAndRoles } from 'src/types/bootstrapTypes';
 import SavedQueryPreviewModal from 'src/features/queries/SavedQueryPreviewModal';
 import { findPermission } from 'src/utils/findPermission';
+import copyTextToClipboard from 'src/utils/copy';
 
 const PAGE_SIZE = 25;
 const PASSWORDS_NEEDED_MESSAGE = t(
@@ -97,6 +98,16 @@ const StyledTableLabel = styled.div`
 
 const StyledPopoverItem = styled.div`
   color: ${({ theme }) => theme.colors.grayscale.dark2};
+`;
+
+const StyledLink = styled.span`
+  color: ${({ theme }) => theme.colors.primary.base};
+  cursor: pointer;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 function SavedQueryList({
@@ -242,13 +253,28 @@ function SavedQueryList({
   menuData.buttons = subMenuButtons;
 
   // Action methods
-  const openInSqlLab = (id: number, openInNewWindow: boolean) => {
-    if (openInNewWindow) {
-      window.open(`/sqllab?savedQueryId=${id}`);
-    } else {
-      history.push(`/sqllab?savedQueryId=${id}`);
-    }
-  };
+  const openInSqlLab = useCallback(
+    async (id: number, openInNewWindow: boolean) => {
+      const url = `${window.location.origin}/sqllab?savedQueryId=${id}`;
+
+      try {
+        // Copy link to clipboard first
+        await copyTextToClipboard(() => Promise.resolve(url));
+        addSuccessToast(t('Link Copied!'));
+      } catch (error) {
+        // If clipboard fails, still navigate but show error toast
+        addDangerToast(t('Sorry, your browser does not support copying.'));
+      }
+
+      // Navigate after clipboard operation completes (or fails)
+      if (openInNewWindow) {
+        window.open(`/sqllab?savedQueryId=${id}`);
+      } else {
+        history.push(`/sqllab?savedQueryId=${id}`);
+      }
+    },
+    [addDangerToast, addSuccessToast, history],
+  );
 
   const copyQueryLink = useCallback(
     async (savedQuery: SavedQueryObject) => {
@@ -333,7 +359,24 @@ function SavedQueryList({
           row: {
             original: { id, label },
           },
-        }: any) => <Link to={`/sqllab?savedQueryId=${id}`}>{label}</Link>,
+        }: any) => (
+          <StyledLink
+            role="link"
+            tabIndex={0}
+            onClick={(e: MouseEvent) => {
+              e.preventDefault();
+              openInSqlLab(id, e.metaKey || e.ctrlKey);
+            }}
+            onKeyDown={(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openInSqlLab(id, e.metaKey || e.ctrlKey);
+              }
+            }}
+          >
+            {label}
+          </StyledLink>
+        ),
       },
       {
         accessor: 'description',
@@ -479,7 +522,7 @@ function SavedQueryList({
         hidden: true,
       },
     ],
-    [canDelete, canEdit, canExport, copyQueryLink, handleSavedQueryPreview],
+    [canDelete, canEdit, canExport, copyQueryLink, handleSavedQueryPreview, openInSqlLab],
   );
 
   const filters: Filters = useMemo(
