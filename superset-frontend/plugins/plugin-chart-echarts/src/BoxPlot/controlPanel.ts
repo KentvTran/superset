@@ -36,6 +36,7 @@ import {
   getTemporalColumns,
   sharedControls,
 } from '@superset-ui/chart-controls';
+import { DEFAULT_FORM_DATA } from './types';
 
 const config: ControlPanelConfig = {
   controlPanelSections: [
@@ -154,6 +155,18 @@ const config: ControlPanelConfig = {
               choices: D3_TIME_FORMAT_OPTIONS,
               default: 'smart_date',
               description: D3_FORMAT_DOCS,
+            },
+          },
+        ],
+        [
+          {
+            name: 'zoomable',
+            config: {
+              type: 'CheckboxControl',
+              label: t('Data Zoom'),
+              default: DEFAULT_FORM_DATA.zoomable,
+              renderTrigger: true,
+              description: t('Enable data zooming controls'),
             },
           },
         ],

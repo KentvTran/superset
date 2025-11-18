@@ -57,4 +57,56 @@ describe('Visualization > Box Plot', () => {
       '.Control[data-test="color_scheme"] .ant-select-selection-item [data-test="supersetColors"]',
     ).should('exist');
   });
+
+  it('should enable data zoom functionality', () => {
+    verify(BOX_PLOT_FORM_DATA);
+
+    // Navigate to Chart Options section
+    cy.get('#controlSections-tab-display').click();
+    cy.get('.Control[data-test="zoomable"]').scrollIntoView();
+
+    // Enable data zoom
+    cy.get('.Control[data-test="zoomable"] input[type="checkbox"]').check({
+      force: true,
+    });
+
+    // Wait for chart to update
+    cy.wait('@getJson');
+
+    // Verify the chart still renders
+    cy.get('.chart-container .box_plot canvas').should('have.length', 1);
+
+    // Verify zoom slider is present (ECharts dataZoom slider)
+    // The slider is rendered as part of the ECharts canvas, so we verify
+    // the chart container is present and the zoom control is enabled
+    cy.get('.chart-container').should('be.visible');
+  });
+
+  it('should disable data zoom functionality', () => {
+    const formDataWithZoom = {
+      ...BOX_PLOT_FORM_DATA,
+      zoomable: true,
+    };
+    verify(formDataWithZoom);
+
+    // Navigate to Chart Options section
+    cy.get('#controlSections-tab-display').click();
+    cy.get('.Control[data-test="zoomable"]').scrollIntoView();
+
+    // Verify zoom is enabled
+    cy.get('.Control[data-test="zoomable"] input[type="checkbox"]').should(
+      'be.checked',
+    );
+
+    // Disable data zoom
+    cy.get('.Control[data-test="zoomable"] input[type="checkbox"]').uncheck({
+      force: true,
+    });
+
+    // Wait for chart to update
+    cy.wait('@getJson');
+
+    // Verify the chart still renders
+    cy.get('.chart-container .box_plot canvas').should('have.length', 1);
+  });
 });
