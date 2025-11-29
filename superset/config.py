@@ -563,6 +563,12 @@ DEFAULT_FEATURE_FLAGS: dict[str, bool] = {
     "DATE_FORMAT_IN_EMAIL_SUBJECT": False,
 }
 
+
+# Custom database error message configuration.
+# Allows administrators to define user-friendly error messages per database.
+# See documentation for configuration format.
+CUSTOM_DATABASE_ERRORS: dict = {}
+
 # ------------------------------
 # SSH Tunnel
 # ------------------------------

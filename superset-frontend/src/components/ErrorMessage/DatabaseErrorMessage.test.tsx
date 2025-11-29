@@ -112,3 +112,40 @@ test('should NOT render the owners', () => {
     screen.queryByText('Chart Owners: Owner A, Owner B'),
   ).not.toBeInTheDocument();
 });
+
+test('should NOT render "See more" when show_issue_info is false and no custom_doc_links', () => {
+  const props = {
+    ...mockedProps,
+    error: {
+      ...mockedProps.error,
+      extra: {
+        engine_name: 'PostgreSQL',
+        show_issue_info: false,
+      },
+    },
+  };
+  render(<DatabaseErrorMessage {...props} />, { useRedux: true });
+  expect(screen.queryByText('See more')).not.toBeInTheDocument();
+});
+
+test('should render custom_doc_links when provided', () => {
+  const props = {
+    ...mockedProps,
+    error: {
+      ...mockedProps.error,
+      extra: {
+        ...mockedProps.error.extra,
+        custom_doc_links: [
+          { url: 'https://docs.example.com', label: 'View documentation' },
+        ],
+      },
+    },
+  };
+  render(<DatabaseErrorMessage {...props} />, { useRedux: true });
+  const button = screen.getByText('See more');
+  userEvent.click(button);
+  expect(screen.getByText('View documentation')).toBeInTheDocument();
+  expect(
+    screen.getByRole('link', { name: 'View documentation' }),
+  ).toHaveAttribute('href', 'https://docs.example.com');
+});
