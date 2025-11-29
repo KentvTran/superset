@@ -1361,23 +1361,44 @@ class BaseEngineSpec:  # pylint: disable=too-many-public-methods
 
     @classmethod
     def extract_errors(
-        cls, ex: Exception, context: dict[str, Any] | None = None
+        cls,
+        ex: Exception,
+        context: dict[str, Any] | None = None,
+        database: "Database" | None = None,
     ) -> list[SupersetError]:
         raw_message = cls._extract_error_message(ex)
 
         context = context or {}
-        for regex, (message, error_type, extra) in cls.custom_errors.items():
-            if match := regex.search(raw_message):
-                params = {**context, **match.groupdict()}
-                extra["engine_name"] = cls.engine_name
-                return [
-                    SupersetError(
-                        error_type=error_type,
-                        message=message % params,
-                        level=ErrorLevel.ERROR,
-                        extra=extra,
-                    )
-                ]
+
+        # Check for per-database custom errors defined via CUSTOM_DATABASE_ERRORS.
+        custom_db_errors: dict[str, Any] = current_app.config.get(
+            "CUSTOM_DATABASE_ERRORS", {}
+        )
+
+        error_configs_to_check: list[dict[Pattern[str], tuple[str, Any, dict[str, Any]]]] = []
+
+        if database is not None and database.database_name in custom_db_errors:
+            error_configs_to_check.append(custom_db_errors[database.database_name])
+
+        if "default" in custom_db_errors:
+            error_configs_to_check.append(custom_db_errors["default"])
+
+        # Always check engine-level custom_errors last.
+        error_configs_to_check.append(cls.custom_errors)
+
+        for error_config in error_configs_to_check:
+            for regex, (message, error_type, extra) in error_config.items():
+                if match := regex.search(raw_message):
+                    params = {**context, **match.groupdict()}
+                    merged_extra = {**extra, "engine_name": cls.engine_name}
+                    return [
+                        SupersetError(
+                            error_type=error_type,
+                            message=message % params,
+                            level=ErrorLevel.ERROR,
+                            extra=merged_extra,
+                        )
+                    ]
 
         return [
             SupersetError(

@@ -23,13 +23,20 @@ import { ErrorMessageComponentProps } from './types';
 import IssueCode from './IssueCode';
 import ErrorAlert from './ErrorAlert';
 
+interface CustomDocLink {
+  url: string;
+  label: string;
+}
+
 interface DatabaseErrorExtra {
   owners?: string[];
-  issue_codes: {
+  issue_codes?: {
     code: number;
     message: string;
   }[];
   engine_name: string | null;
+  show_issue_info?: boolean;
+  custom_doc_links?: CustomDocLink[];
 }
 
 function DatabaseErrorMessage({
@@ -45,39 +52,61 @@ function DatabaseErrorMessage({
   const alertDescription =
     remainingLines.length > 0 ? remainingLines.join('\n') : null;
 
-  const body = extra && (
-    <>
+  const showIssueInfo = extra?.show_issue_info !== false;
+
+  const customDocLinksElement =
+    extra?.custom_doc_links && extra.custom_doc_links.length ? (
       <p>
-        {t('This may be triggered by:')}
+        {t('Helpful resources:')}
         <br />
-        {extra.issue_codes
-          ?.map<ReactNode>(issueCode => (
-            <IssueCode {...issueCode} key={issueCode.code} />
-          ))
-          .reduce((prev, curr) => [prev, <br />, curr])}
+        {extra.custom_doc_links.map(link => (
+          <span key={link.url}>
+            <a href={link.url} target="_blank" rel="noopener noreferrer">
+              {link.label}
+            </a>
+            <br />
+          </span>
+        ))}
       </p>
-      {isVisualization && extra.owners && (
-        <>
-          <br />
+    ) : null;
+
+  const body =
+    extra && (showIssueInfo || customDocLinksElement || isVisualization) ? (
+      <>
+        {showIssueInfo && extra.issue_codes?.length ? (
           <p>
-            {tn(
-              'Please reach out to the Chart Owner for assistance.',
-              'Please reach out to the Chart Owners for assistance.',
-              extra.owners.length,
-            )}
+            {t('This may be triggered by:')}
+            <br />
+            {extra.issue_codes
+              .map<ReactNode>(issueCode => (
+                <IssueCode {...issueCode} key={issueCode.code} />
+              ))
+              .reduce((prev, curr) => [prev, <br />, curr])}
           </p>
-          <p>
-            {tn(
-              'Chart Owner: %s',
-              'Chart Owners: %s',
-              extra.owners.length,
-              extra.owners.join(', '),
-            )}
-          </p>
-        </>
-      )}
-    </>
-  );
+        ) : null}
+        {customDocLinksElement}
+        {isVisualization && extra.owners && (
+          <>
+            <br />
+            <p>
+              {tn(
+                'Please reach out to the Chart Owner for assistance.',
+                'Please reach out to the Chart Owners for assistance.',
+                extra.owners.length,
+              )}
+            </p>
+            <p>
+              {tn(
+                'Chart Owner: %s',
+                'Chart Owners: %s',
+                extra.owners.length,
+                extra.owners.join(', '),
+              )}
+            </p>
+          </>
+        )}
+      </>
+    ) : null;
 
   return (
     <ErrorAlert

@@ -133,3 +133,74 @@ try:
     )
 except ImportError:
     logger.info("Using default Docker config...")
+
+import re
+from flask_babel import gettext as __
+from superset.errors import SupersetErrorType
+
+CUSTOM_DATABASE_ERRORS = {
+    "examples": {
+        # PostgreSQL: relation "table_name" does not exist
+        re.compile(r'relation "(?P<table_name>[^"]+)" does not exist'): (
+            __("The table '%(table_name)s' doesn't exist. Please check the table name or browse available tables in the left panel."),
+            SupersetErrorType.TABLE_DOES_NOT_EXIST_ERROR,
+            {
+                "custom_doc_links": [
+                    {
+                        "url": "https://superset.apache.org/docs/using-superset/creating-your-first-dashboard/#registering-a-new-table",
+                        "label": "How to register tables in Superset"
+                    },
+                    {
+                        "url": "https://superset.apache.org/docs/faq/",
+                        "label": "Superset FAQ"
+                    }
+                ],
+                "show_issue_info": False,
+            }
+        ),
+        # SQLite: no such table: table_name
+        re.compile(r'no such table: (?P<table_name>\w+)'): (
+            __("The table '%(table_name)s' doesn't exist. Please check the table name or browse available tables in the left panel."),
+            SupersetErrorType.TABLE_DOES_NOT_EXIST_ERROR,
+            {
+                "custom_doc_links": [
+                    {
+                        "url": "https://superset.apache.org/docs/using-superset/creating-your-first-dashboard/#registering-a-new-table",
+                        "label": "How to register tables in Superset"
+                    }
+                ],
+                "show_issue_info": False,
+            }
+        ),
+    },
+    "default": {
+        # Permission denied
+        re.compile(r'(?i)permission denied'): (
+            __("You don't have permission to access this resource. Please contact your database administrator."),
+            SupersetErrorType.GENERIC_DB_ENGINE_ERROR,
+            {
+                "custom_doc_links": [
+                    {
+                        "url": "https://superset.apache.org/docs/security/",
+                        "label": "Superset Security Documentation"
+                    }
+                ],
+                "show_issue_info": False,
+            }
+        ),
+        # Connection refused
+        re.compile(r'(?i)connection refused|could not connect'): (
+            __("Unable to connect to the database. The database server may be down or unreachable."),
+            SupersetErrorType.GENERIC_DB_ENGINE_ERROR,
+            {
+                "custom_doc_links": [
+                    {
+                        "url": "https://superset.apache.org/docs/configuration/databases/",
+                        "label": "Database Connection Guide"
+                    }
+                ],
+                "show_issue_info": False,
+            }
+        ),
+    }
+}
